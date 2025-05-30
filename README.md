@@ -1,0 +1,196 @@
+
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Калькулятор цен с наценкой</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .gradient-text {
+      background: linear-gradient(45deg, #00ff96, #8a2be2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-fill-color: transparent;
+    }
+    .gradient-button {
+      background: linear-gradient(45deg, #00ff96, #8a2be2);
+      background-size: 200% 200%;
+      animation: gradientShift 5s ease infinite, pulse 2s ease-in-out infinite;
+    }
+    .gradient-button:hover {
+      background-position: 100% 0;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    body {
+      background-color: #2d3748;
+    }
+    .calculator {
+      background-color: #2d3748;
+    }
+    /* Оптимизация для мобильных устройств */
+    @media (max-width: 640px) {
+      .calculator {
+        padding: 1rem;
+      }
+      .gradient-text {
+        font-size: 1.5rem;
+      }
+      .gradient-button {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+      }
+      .input-label {
+        font-size: 0.9rem;
+      }
+      .result-text {
+        font-size: 0.9rem;
+      }
+      .saved-results {
+        font-size: 0.8rem;
+      }
+      .site-info {
+        font-size: 0.7rem;
+        padding: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen relative">
+  <div class="site-info absolute top-2 right-2 text-gray-200 text-sm md:text-base">
+    Сайт создан и предназначен для личного пользования Новожиловой А.А.
+  </div>
+  <div class="calculator p-8 rounded-lg shadow-lg w-full max-w-4xl flex flex-col gap-6">
+    <div class="flex flex-col md:flex-row gap-4">
+      <div class="flex-1">
+        <h1 class="text-4xl font-bold text-center mb-4 gradient-text">Калькулятор цен</h1>
+        <div class="mb-4">
+          <label for="inputPrice" class="input-label block text-lg font-medium text-gray-200">Введите сумму заказа:</label>
+          <input type="number" id="inputPrice" min="0" class="mt-2 block w-full p-3 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg bg-gray-700 text-white" placeholder="Сумма в рублях" step="0.01">
+        </div>
+        <div id="result" class="mt-4"></div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button id="percent5Btn" class="gradient-button text-white p-3 rounded-md text-lg" data-percent="5">+5%</button>
+        <button id="percent10Btn" class="gradient-button text-white p-3 rounded-md text-lg" data-percent="10">+10%</button>
+        <button id="percent15Btn" class="gradient-button text-white p-3 rounded-md text-lg" data-percent="15">+15%</button>
+        <button id="percent20Btn" class="gradient-button text-white p-3 rounded-md text-lg" data-percent="20">+20%</button>
+        <button id="undoBtn" class="gradient-button text-white p-3 rounded-md text-lg">Отмена</button>
+        <button id="saveBtn" class="gradient-button text-white p-3 rounded-md text-lg">Сохранить</button>
+      </div>
+    </div>
+    <div class="mt-4">
+      <h2 class="text-2xl font-bold text-center mb-4 gradient-text">Сохраненные суммы</h2>
+      <div id="savedResults" class="saved-results bg-gray-700 p-4 rounded-md shadow-sm"></div>
+    </div>
+  </div>
+
+  <script>
+    const inputPrice = document.getElementById('inputPrice');
+    const resultDiv = document.getElementById('result');
+    const savedResultsDiv = document.getElementById('savedResults');
+    const buttons = [
+      document.getElementById('percent5Btn'),
+      document.getElementById('percent10Btn'),
+      document.getElementById('percent15Btn'),
+      document.getElementById('percent20Btn')
+    ];
+    const undoBtn = document.getElementById('undoBtn');
+    const saveBtn = document.getElementById('saveBtn');
+
+    let appliedPercentages = [];
+    let savedResults = [];
+
+    function updateResults() {
+      const basePrice = parseFloat(inputPrice.value);
+      resultDiv.innerHTML = '';
+
+      if (isNaN(basePrice) || basePrice <= 0) {
+        resultDiv.innerHTML = '<p class="text-red-400 text-center text-lg result-text">Пожалуйста, введите корректную сумму.</p>';
+        return;
+      }
+
+      if (appliedPercentages.length === 0) {
+        resultDiv.innerHTML = '<p class="text-gray-400 text-center text-lg result-text">Выберите процент наценки.</p>';
+        return;
+      }
+
+      let finalPrice = basePrice;
+      appliedPercentages.forEach(percentage => {
+        finalPrice *= (1 + percentage / 100);
+      });
+
+      resultDiv.innerHTML = `
+        <div class="bg-gray-600 p-4 rounded-md shadow-sm">
+          <p class="text-lg font-medium text-gray-200 result-text">Итоговая цена с наценкой (${appliedPercentages.join(', ')}%):</p>
+          <p class="text-2xl font-bold text-white result-text">${finalPrice.toFixed(2)} руб.</p>
+        </div>
+      `;
+    }
+
+    function updateSavedResults() {
+      if (savedResults.length === 0) {
+        savedResultsDiv.innerHTML = '<p class="text-gray-400 text-center text-lg saved-results">Нет сохраненных сумм.</p>';
+        return;
+      }
+
+      savedResultsDiv.innerHTML = savedResults.map((result, index) => `
+        <div class="bg-gray-600 p-3 rounded-md shadow-sm mb-2">
+          <p class="text-sm font-medium text-gray-200 saved-results">Сохранение #${index + 1} (${result.percentages.join(', ')}%):</p>
+          <p class="text-lg font-bold text-white saved-results">${result.price.toFixed(2)} руб.</p>
+        </div>
+      `).join('');
+    }
+
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        const percentage = parseFloat(button.getAttribute('data-percent'));
+        appliedPercentages.push(percentage);
+        updateResults();
+      });
+    });
+
+    undoBtn.addEventListener('click', () => {
+      appliedPercentages.pop();
+      updateResults();
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const basePrice = parseFloat(inputPrice.value);
+      if (isNaN(basePrice) || basePrice <= 0 || appliedPercentages.length === 0) {
+        return;
+      }
+
+      let finalPrice = basePrice;
+      appliedPercentages.forEach(percentage => {
+        finalPrice *= (1 + percentage / 100);
+      });
+
+      savedResults.push({
+        price: finalPrice,
+        percentages: [...appliedPercentages]
+      });
+      updateSavedResults();
+    });
+
+    inputPrice.addEventListener('input', () => {
+      updateResults();
+    });
+
+    inputPrice.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        updateResults();
+      }
+    });
+  </script>
+</body>
+</html>
